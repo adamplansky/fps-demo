@@ -1,0 +1,17 @@
+local cluster setup: /Users/apy19/workspace/personal/second-brain/homelab
+fps parser: /Users/apy19/workspace/personal/fps-challenge-parser
+
+local cluster where is homelab deployed: export KUBECONFIG=~/.kube/k3s-home.yaml
+
+
+goal: 
+
+fps-demo app for cod2
+golang
+sqllite
+once per day parsing fprchallenge and storing all demos in homelab cluster -> it should be probably s3 like storage - but thinkg about it
+fps-demo should be searchable by map,player,team,date and it should be all downloadable by player,map,team,date etc...
+
+basically we are creating cod2 demo storage archive for next 3-4 month - estimate what storage we need
+
+

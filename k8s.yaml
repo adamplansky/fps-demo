@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Namespace
+metadata: {name: fps-demo}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: fps-demo-data, namespace: fps-demo}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: {requests: {storage: 50Gi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: fps-demo, namespace: fps-demo}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: fps-demo}}
+  template:
+    metadata: {labels: {app: fps-demo}}
+    spec:
+      containers:
+      - name: archive
+        image: impy/fps-demo:latest
+        args: [serve]
+        ports: [{name: http, containerPort: 8080}]
+        env: [{name: DB_PATH, value: /data/fps-demo.db}, {name: DEMO_ROOT, value: /data/demos}]
+        volumeMounts: [{name: data, mountPath: /data}]
+        readinessProbe: {httpGet: {path: /healthz, port: http}}
+      volumes: [{name: data, persistentVolumeClaim: {claimName: fps-demo-data}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: fps-demo, namespace: fps-demo}
+spec:
+  selector: {app: fps-demo}
+  ports: [{name: http, port: 80, targetPort: http}]
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata: {name: fps-demo-sync, namespace: fps-demo}
+spec:
+  schedule: "30 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: sync
+            image: impy/fps-demo:latest
+            args: [sync]
+            env: [{name: DB_PATH, value: /data/fps-demo.db}, {name: DEMO_ROOT, value: /data/demos}, {name: PARSER_COMMAND, value: "cd /parser && /parser/fps-challenge-parser fetch"}, {name: PARSER_MATCHES_FILE, value: /parser/matches.json}]
+            volumeMounts: [{name: data, mountPath: /data}, {name: parser, mountPath: /parser}]
+          volumes:
+          - {name: data, persistentVolumeClaim: {claimName: fps-demo-data}}
+          - {name: parser, persistentVolumeClaim: {claimName: fps-parser-data}}
